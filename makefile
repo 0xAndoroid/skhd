@@ -4,12 +4,15 @@ BUILD_FLAGS    = -std=c99 -Wall -g -O0
 SKHD_SRC       = ./src/skhd.c
 BINS           = $(BUILD_PATH)/skhd
 
-.PHONY: all clean install
+.PHONY: all clean install sign
 
 all: clean $(BINS)
 
 install: BUILD_FLAGS=-std=c99 -Wall -O2
-install: clean $(BINS)
+install: clean $(BINS) sign
+
+sign: $(BINS)
+	codesign --force --sign - $<
 
 clean:
 	rm -rf $(BUILD_PATH)
