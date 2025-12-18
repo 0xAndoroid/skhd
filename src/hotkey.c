@@ -94,6 +94,58 @@ unsigned long hash_string(char *key)
     return hash;
 }
 
+static bool
+glob_match(const char *pattern, const char *str)
+{
+    while (*pattern && *str) {
+        if (*pattern == '*') {
+            ++pattern;
+            if (!*pattern) return true;
+            while (*str) {
+                if (glob_match(pattern, str)) return true;
+                ++str;
+            }
+            return false;
+        } else if (*pattern == '?') {
+            ++pattern;
+            ++str;
+        } else if (*pattern == *str) {
+            ++pattern;
+            ++str;
+        } else {
+            return false;
+        }
+    }
+    while (*pattern == '*') ++pattern;
+    return !*pattern && !*str;
+}
+
+static bool
+string_contains(const char *haystack, const char *needle)
+{
+    if (!needle || !*needle) return true;
+    if (!haystack) return false;
+    return strstr(haystack, needle) != NULL;
+}
+
+bool title_matches(const char *title, const char *pattern, enum title_match_type match_type)
+{
+    if (match_type == Title_Match_None) return true;
+    if (!pattern) return true;
+    if (!title) return false;
+
+    switch (match_type) {
+    case Title_Match_Exact:
+        return strcmp(title, pattern) == 0;
+    case Title_Match_Contains:
+        return string_contains(title, pattern);
+    case Title_Match_Glob:
+        return glob_match(pattern, title);
+    default:
+        return true;
+    }
+}
+
 static inline void
 fork_and_exec(char *command)
 {
@@ -145,16 +197,48 @@ find_process_command_mapping(struct hotkey *hotkey, uint32_t *capture, struct ca
 {
     char *result = NULL;
     bool found = false;
+    char *window_title = NULL;
+    bool title_fetched = false;
 
     for (int i = 0; i < buf_len(hotkey->process_name); ++i) {
         if (same_string(carbon->process_name, hotkey->process_name[i])) {
+            enum title_match_type match_type = hotkey->title_match_type ? hotkey->title_match_type[i] : Title_Match_None;
+            char *pattern = hotkey->title_pattern ? hotkey->title_pattern[i] : NULL;
+
+            if (match_type != Title_Match_None && pattern) {
+                if (!title_fetched) {
+                    window_title = get_focused_window_title();
+                    title_fetched = true;
+                }
+                if (!title_matches(window_title, pattern, match_type)) {
+                    continue;
+                }
+            }
+
             result = hotkey->command[i];
             found = true;
             break;
         }
     }
 
-    if (!found) result = hotkey->wildcard_command;
+    if (!found) {
+        if (hotkey->wildcard_title_pattern && hotkey->wildcard_title_match_type != Title_Match_None) {
+            if (!title_fetched) {
+                window_title = get_focused_window_title();
+                title_fetched = true;
+            }
+            if (title_matches(window_title, hotkey->wildcard_title_pattern, hotkey->wildcard_title_match_type)) {
+                result = hotkey->wildcard_command;
+            }
+        } else {
+            result = hotkey->wildcard_command;
+        }
+    }
+
+    if (title_fetched && window_title) {
+        free(window_title);
+    }
+
     if (!result) *capture &= ~HOTKEY_FOUND;
 
     return result;
@@ -203,6 +287,14 @@ void free_mode_map(struct table *mode_map)
                 free(hotkey->process_name[i]);
             }
             buf_free(hotkey->process_name);
+
+            for (int i = 0; i < buf_len(hotkey->title_pattern); ++i) {
+                if (hotkey->title_pattern[i]) free(hotkey->title_pattern[i]);
+            }
+            buf_free(hotkey->title_pattern);
+            buf_free(hotkey->title_match_type);
+
+            if (hotkey->wildcard_title_pattern) free(hotkey->wildcard_title_pattern);
 
             for (int i = 0; i < buf_len(hotkey->command); ++i) {
                 free(hotkey->command[i]);

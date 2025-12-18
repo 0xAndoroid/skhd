@@ -1,0 +1,75 @@
+# Example skhd config demonstrating window title filtering
+#
+# Window title filtering allows hotkeys to be conditional on the
+# focused window's title, enabling use cases like detecting when
+# nvim is running inside a terminal.
+#
+# Syntax:
+#   title="pattern"  - Glob pattern match (* = any chars, ? = single char)
+#   title~="pattern" - Substring/contains match
+
+# Example 1: Passthrough navigation keys when nvim is detected in terminal
+# This allows nvim to receive ctrl-h/j/k/l for its own navigation
+ctrl - h [
+    "ghostty" title~="nvim" ~
+    "kitty" title~="nvim" ~
+    "iterm2" title~="nvim" ~
+    "terminal" title~="nvim" ~
+    "ghostty" : yabai -m window --focus west
+    "kitty" : yabai -m window --focus west
+    * : yabai -m window --focus west
+]
+
+ctrl - j [
+    "ghostty" title~="nvim" ~
+    "kitty" title~="nvim" ~
+    "iterm2" title~="nvim" ~
+    "terminal" title~="nvim" ~
+    "ghostty" : yabai -m window --focus south
+    "kitty" : yabai -m window --focus south
+    * : yabai -m window --focus south
+]
+
+ctrl - k [
+    "ghostty" title~="nvim" ~
+    "kitty" title~="nvim" ~
+    "iterm2" title~="nvim" ~
+    "terminal" title~="nvim" ~
+    "ghostty" : yabai -m window --focus north
+    "kitty" : yabai -m window --focus north
+    * : yabai -m window --focus north
+]
+
+ctrl - l [
+    "ghostty" title~="nvim" ~
+    "kitty" title~="nvim" ~
+    "iterm2" title~="nvim" ~
+    "terminal" title~="nvim" ~
+    "ghostty" : yabai -m window --focus east
+    "kitty" : yabai -m window --focus east
+    * : yabai -m window --focus east
+]
+
+# Example 2: Using glob patterns for precise matching
+# Match window titles ending with "- nvim"
+alt - n [
+    "kitty" title="*- nvim" : echo "nvim detected via glob"
+    "kitty" : echo "kitty without nvim"
+    * : echo "other app"
+]
+
+# Example 3: Wildcard with title filter
+# Matches any application where the window title contains "vim"
+alt - v [
+    * title~="vim" : echo "vim detected in any app"
+]
+
+# Example 4: Multiple title patterns for same app
+# First matching rule wins
+ctrl - t [
+    "code" title~="extension" : echo "VS Code extension view"
+    "code" title~=".ts" : echo "VS Code TypeScript file"
+    "code" title~=".js" : echo "VS Code JavaScript file"
+    "code" : echo "VS Code other"
+    * : echo "other app"
+]

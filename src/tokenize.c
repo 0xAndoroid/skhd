@@ -111,6 +111,10 @@ resolve_identifier_type(struct token token)
         return Token_Key;
     }
 
+    if (token_equals(token, "title")) {
+        return Token_Title;
+    }
+
     for (int i = 0; i < array_count(modifier_flags_str); ++i) {
         if (token_equals(token, modifier_flags_str[i])) {
             return Token_Modifier;
@@ -153,7 +157,16 @@ get_token(struct tokenizer *tokenizer)
     case ',': { token.type = Token_Comma;       } break;
     case '<': { token.type = Token_Insert;      } break;
     case '@': { token.type = Token_Capture;     } break;
-    case '~': { token.type = Token_Unbound;     } break;
+    case '~': {
+        if (*tokenizer->at && *tokenizer->at == '=') {
+            advance(tokenizer);
+            token.length = tokenizer->at - token.text;
+            token.type = Token_TitleContains;
+        } else {
+            token.type = Token_Unbound;
+        }
+    } break;
+    case '=': { token.type = Token_Equals;      } break;
     case '*': { token.type = Token_Wildcard;    } break;
     case '[': { token.type = Token_BeginList;   } break;
     case ']': { token.type = Token_EndList;     } break;

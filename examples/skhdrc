@@ -90,6 +90,18 @@
 #     "finder"      : false
 # ]
 
+# application specific bindings with window title filtering
+# useful for detecting e.g. nvim running inside a terminal
+#
+# ctrl - h [
+#     "ghostty" title~="nvim" ~
+#     "ghostty" : yabai -m window --focus west
+#     * : yabai -m window --focus west
+# ]
+#
+# title="pattern"  - glob pattern matching (* = any chars, ? = single char)
+# title~="pattern" - substring/contains matching
+
 # specify a file that should be included as an additional config-file.
 # treated as an absolutepath if the filename begins with '/' otherwise
 # the file is relative to the path of the config-file it was loaded from.

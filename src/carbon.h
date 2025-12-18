@@ -14,5 +14,6 @@ struct carbon_event
 
 char *find_process_name_for_pid(pid_t pid);
 bool carbon_event_init(struct carbon_event *carbon);
+char *get_focused_window_title(void);
 
 #endif

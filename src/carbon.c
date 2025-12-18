@@ -73,3 +73,36 @@ bool carbon_event_init(struct carbon_event *carbon)
                                carbon,
                                &carbon->handler_ref) == noErr;
 }
+
+char *get_focused_window_title(void)
+{
+    AXUIElementRef app = AXUIElementCreateSystemWide();
+    AXUIElementRef focused_app = NULL;
+    AXUIElementRef focused_window = NULL;
+    CFTypeRef title_ref = NULL;
+    char *title = NULL;
+
+    if (AXUIElementCopyAttributeValue(app, kAXFocusedApplicationAttribute, (CFTypeRef *)&focused_app) != kAXErrorSuccess) {
+        goto cleanup;
+    }
+
+    if (AXUIElementCopyAttributeValue(focused_app, kAXFocusedWindowAttribute, (CFTypeRef *)&focused_window) != kAXErrorSuccess) {
+        goto cleanup;
+    }
+
+    if (AXUIElementCopyAttributeValue(focused_window, kAXTitleAttribute, &title_ref) != kAXErrorSuccess) {
+        goto cleanup;
+    }
+
+    if (CFGetTypeID(title_ref) == CFStringGetTypeID()) {
+        title = copy_cfstring((CFStringRef)title_ref);
+    }
+
+cleanup:
+    if (title_ref) CFRelease(title_ref);
+    if (focused_window) CFRelease(focused_window);
+    if (focused_app) CFRelease(focused_app);
+    if (app) CFRelease(app);
+
+    return title;
+}

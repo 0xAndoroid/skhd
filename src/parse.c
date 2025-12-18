@@ -80,6 +80,43 @@ parse_command(struct parser *parser, struct hotkey *hotkey)
     buf_push(hotkey->command, result);
 }
 
+static bool
+parse_title_filter(struct parser *parser, char **title_pattern, uint8_t *match_type)
+{
+    *title_pattern = NULL;
+    *match_type = Title_Match_None;
+
+    if (parser_match(parser, Token_Title)) {
+        if (parser_match(parser, Token_Equals)) {
+            if (parser_match(parser, Token_String)) {
+                struct token pattern_token = parser_previous(parser);
+                *title_pattern = copy_string_count(pattern_token.text, pattern_token.length);
+                *match_type = Title_Match_Glob;
+                debug("\ttitle (glob): '%s'\n", *title_pattern);
+                return true;
+            } else {
+                parser_report_error(parser, parser_peek(parser), "expected string after 'title='\n");
+                return false;
+            }
+        } else if (parser_match(parser, Token_TitleContains)) {
+            if (parser_match(parser, Token_String)) {
+                struct token pattern_token = parser_previous(parser);
+                *title_pattern = copy_string_count(pattern_token.text, pattern_token.length);
+                *match_type = Title_Match_Contains;
+                debug("\ttitle (contains): '%s'\n", *title_pattern);
+                return true;
+            } else {
+                parser_report_error(parser, parser_peek(parser), "expected string after 'title~='\n");
+                return false;
+            }
+        } else {
+            parser_report_error(parser, parser_peek(parser), "expected '=' or '~=' after 'title'\n");
+            return false;
+        }
+    }
+    return true;
+}
+
 static void
 parse_process_command_list(struct parser *parser, struct hotkey *hotkey)
 {
@@ -88,6 +125,15 @@ parse_process_command_list(struct parser *parser, struct hotkey *hotkey)
         char *name = copy_string_count(name_token.text, name_token.length);
         for (char *s = name; *s; ++s) *s = tolower(*s);
         buf_push(hotkey->process_name, name);
+
+        char *title_pattern = NULL;
+        uint8_t match_type = Title_Match_None;
+        if (!parse_title_filter(parser, &title_pattern, &match_type)) {
+            return;
+        }
+        buf_push(hotkey->title_pattern, title_pattern);
+        buf_push(hotkey->title_match_type, match_type);
+
         if (parser_match(parser, Token_Command)) {
             parse_command(parser, hotkey);
             parse_process_command_list(parser, hotkey);
@@ -98,6 +144,14 @@ parse_process_command_list(struct parser *parser, struct hotkey *hotkey)
             parser_report_error(parser, parser_peek(parser), "expected '~' or ':' followed by command\n");
         }
     } else if (parser_match(parser, Token_Wildcard)) {
+        char *title_pattern = NULL;
+        uint8_t match_type = Title_Match_None;
+        if (!parse_title_filter(parser, &title_pattern, &match_type)) {
+            return;
+        }
+        hotkey->wildcard_title_pattern = title_pattern;
+        hotkey->wildcard_title_match_type = match_type;
+
         if (parser_match(parser, Token_Command)) {
             struct token command = parser_previous(parser);
             char *result = copy_string_count(command.text, command.length);

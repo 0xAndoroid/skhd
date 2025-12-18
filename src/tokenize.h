@@ -57,6 +57,10 @@ enum token_type
     Token_BeginList,
     Token_EndList,
 
+    Token_Title,
+    Token_Equals,
+    Token_TitleContains,
+
     Token_Unknown,
     Token_EndOfStream,
 };

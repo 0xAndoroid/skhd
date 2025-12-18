@@ -68,13 +68,25 @@ struct mode
     struct table hotkey_map;
 };
 
+enum title_match_type
+{
+    Title_Match_None = 0,
+    Title_Match_Exact,
+    Title_Match_Contains,
+    Title_Match_Glob,
+};
+
 struct hotkey
 {
     uint32_t flags;
     uint32_t key;
     char **process_name;
+    char **title_pattern;
+    uint8_t *title_match_type;
     char **command;
     char *wildcard_command;
+    char *wildcard_title_pattern;
+    uint8_t wildcard_title_match_type;
     struct mode **mode_list;
 };
 
@@ -102,6 +114,8 @@ unsigned long hash_string(char *key);
 
 bool same_hotkey(struct hotkey *a, struct hotkey *b);
 unsigned long hash_hotkey(struct hotkey *a);
+
+bool title_matches(const char *title, const char *pattern, enum title_match_type match_type);
 
 struct hotkey create_eventkey(CGEventRef event);
 bool intercept_systemkey(CGEventRef event, struct hotkey *eventkey);

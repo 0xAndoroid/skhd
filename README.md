@@ -20,6 +20,7 @@ list of features
 | hotkey passthrough         | [x]  |
 | modal hotkey-system        | [x]  |
 | application specific hotkey| [x]  |
+| window title filtering     | [x]  |
 | blacklist applications     | [x]  |
 | use media-keys as hotkey   | [x]  |
 | synthesize a key-press     | [x]  |
@@ -129,8 +130,12 @@ keycode      = 'apple keyboard kVK_<Key> values (0x3C)'
 
 proc_map_lst = * <proc_map>
 
-proc_map     = <string> ':' <command> | <string>     '~' |
-               '*'      ':' <command> | '*'          '~'
+proc_map     = <string> <title_filter> ':' <command> | <string> <title_filter> '~' |
+               '*'      <title_filter> ':' <command> | '*'      <title_filter> '~'
+
+title_filter = 'title' '=' <string>   |              (glob pattern match)
+               'title' '~=' <string>  |              (substring/contains match)
+                                                     (empty = no title filter)
 
 string       = '"' 'sequence of characters' '"'
 
@@ -150,7 +155,40 @@ command      = command is executed through '$SHELL -c' and
 *            = matches every application not specified in <proc_map_lst>
 
 ~            = application is unbound and keypress is forwarded per usual, when specified in a <proc_map>
+
+title=       = match window title using glob pattern (* matches any sequence, ? matches any character)
+
+title~=      = match window title using substring/contains matching
 ```
+
+### Window Title Filtering
+
+Window title filtering allows hotkeys to be conditional on the focused window's title, in addition to the application name. This is useful for detecting specific states like when nvim is running inside a terminal.
+
+**Syntax examples:**
+```
+# Passthrough when Ghostty window title contains "nvim"
+ctrl - h [
+    "ghostty" title~="nvim" ~
+    "ghostty" : yabai -m window --focus west
+    * : yabai -m window --focus west
+]
+
+# Using glob patterns for more precise matching
+ctrl - j [
+    "kitty" title="*- nvim" : echo "nvim in kitty"
+    "kitty" : echo "kitty without nvim"
+]
+
+# Wildcard with title filter - matches any app with matching title
+ctrl - k [
+    * title~="vim" : echo "vim detected in any app"
+]
+```
+
+**Pattern types:**
+- `title="pattern"` - Glob pattern matching (supports `*` for any sequence, `?` for single character)
+- `title~="pattern"` - Substring matching (checks if title contains the pattern)
 
 A mode is declared according to the following rules:
 ```
